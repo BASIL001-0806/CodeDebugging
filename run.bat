@@ -1,0 +1,9 @@
+@echo off
+cd /d "%~dp0"
+echo Installing dependencies...
+python -m pip install -r requirements.txt >nul 2>&1
+echo Seeding database...
+python seed_data.py
+echo Starting Flask server...
+python app.py
+pause

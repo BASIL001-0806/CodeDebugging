@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Debugging Contest</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #000000;
+            --panel: #050508;
+            --panel-2: #0a0a10;
+            --panel-3: #0d0d14;
+            --border: #13131c;
+            --border-soft: rgba(255,255,255,0.07);
+            --text: #c9c9d4;
+            --text-dim: rgba(255,255,255,0.38);
+            --text-faint: rgba(255,255,255,0.22);
+            --accent: #8b5cf6;
+            --accent-strong: #7c3aed;
+            --green: #22c55e;
+            --red: #ef4444;
+            --amber: #f59e0b;
+            --blue: #38bdf8;
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(900px 600px at 85% -10%, rgba(139,92,246,0.07), transparent 60%),
+                radial-gradient(700px 500px at -10% 110%, rgba(56,189,248,0.05), transparent 60%);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1c1c26; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a2a38; }
+
+        /* ─── Top Bar ─── */
+        .topbar {
+            height: 52px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .topbar .logo {
+            font-weight: 700;
+            font-size: 17px;
+            color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+        .topbar .logo i { margin-right: 6px; }
+        .topbar .violation-badge {
+            background: var(--red);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .topbar .user-info {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .topbar .user-info i { color: var(--accent); }
+        .topbar .user-info .user-detail { font-size: 12px; color: var(--text-faint); }
+        .topbar .switch-user {
+            color: var(--text-dim);
+            font-size: 12px;
+            margin-left: 10px;
+            text-decoration: none;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .topbar .switch-user:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* ─── Main Layout ─── */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 52px);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ─── Question Sidebar ─── */
+        .question-sidebar {
+            width: 230px;
+            min-width: 230px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .question-sidebar h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-faint);
+            margin-bottom: 14px;
+        }
+        .question-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .question-item:hover { background: rgba(139,92,246,0.08); }
+        .question-item.active { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.25); }
+        .question-item .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-dot.not_attempted { background: #2a2a38; }
+        .status-dot.accepted { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+        .status-dot.wrong_answer { background: var(--red); }
+        .status-dot.attempted { background: var(--blue); }
+        .question-item .q-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .question-item .q-diff {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .q-diff.easy { background: rgba(34,197,94,0.15); color: var(--green); }
+        .q-diff.medium { background: rgba(245,158,11,0.15); color: var(--amber); }
+        .q-diff.hard { background: rgba(239,68,68,0.15); color: var(--red); }
+
+        /* ─── Content Area ─── */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ─── Split Panes ─── */
+        .split-panes {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Problem */
+        .left-panel {
+            width: 45%;
+            min-width: 350px;
+            background: var(--bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .problem-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .problem-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .problem-meta { display: flex; gap: 12px; align-items: center; }
+        .difficulty-badge {
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .difficulty-badge.easy { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+        .difficulty-badge.medium { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+        .difficulty-badge.hard { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+        .problem-stats { font-size: 12px; color: var(--text-faint); }
+        .problem-body {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+        }
+        .problem-section { margin-bottom: 20px; }
+        .problem-section h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .problem-section p, .problem-section div {
+            font-size: 14px;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.82);
+        }
+        .sample-box {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 8px;
+        }
+        .sample-box pre {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13px;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .sample-box .label {
+            font-size: 11px;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        /* Right Panel - Editor */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-2);
+            overflow: hidden;
+            min-width: 0;
+        }
+        .editor-toolbar {
+            padding: 10px 16px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .editor-toolbar select {
+            background: var(--panel-3);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+        .editor-toolbar select:focus { border-color: var(--accent); }
+        .editor-toolbar .spacer { flex: 1; }
+        .editor-toolbar .font-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .editor-toolbar .font-control input[type="range"] {
+            width: 80px;
+            accent-color: var(--accent);
+        }
+        .editor-toolbar button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .editor-toolbar button:hover { background: rgba(139,92,246,0.1); color: #fff; }
+
+        #editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ─── Bottom Panel ─── */
+        .bottom-panel {
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+        .bottom-panel .tabs {
+            display: flex;
+            padding: 0 16px;
+            background: var(--panel);
+        }
+        .bottom-panel .tabs button {
+            padding: 10px 16px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .bottom-panel .tabs button:hover { color: #fff; }
+        .bottom-panel .tabs button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        .bottom-panel .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            display: none;
+        }
+        .bottom-panel .tab-content.active { display: block; }
+        .bottom-panel .tab-content pre {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .bottom-panel .tab-content textarea {
+            width: 100%;
+            min-height: 80px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 10px;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13px;
+            resize: vertical;
+            outline: none;
+        }
+        .bottom-panel .tab-content textarea:focus { border-color: var(--accent); }
+        .bottom-panel .panel-footer {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 16px;
+            background: var(--panel);
+            font-size: 12px;
+            color: var(--text-faint);
+        }
+        .bottom-panel .panel-footer .stat { display: flex; align-items: center; gap: 4px; }
+
+        /* ─── Action Buttons ─── */
+        .action-bar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+        }
+        .action-bar button {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-run { background: var(--green); color: #000; }
+        .btn-run:hover { background: #16a34a; }
+        .btn-submit { background: var(--accent-strong); color: #fff; }
+        .btn-submit:hover { background: #6d28d9; }
+        .btn-reset {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border) !important;
+        }
+        .btn-reset:hover { background: rgba(239,68,68,0.1); color: var(--red); border-color: var(--red) !important; }
+        .btn-nav {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border) !important;
+        }
+        .btn-nav:hover { background: rgba(139,92,246,0.1); color: var(--accent); }
+        .action-bar .spacer { flex: 1; }
+
+        /* ─── Result Overlay ─── */
+        .result-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(6px);
+        }
+        .result-overlay.hidden { display: none; }
+        .result-card {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 80px rgba(139,92,246,0.08);
+        }
+        .result-card .icon { font-size: 64px; margin-bottom: 16px; }
+        .result-card .icon.success { color: var(--green); }
+        .result-card .icon.fail { color: var(--red); }
+        .result-card h2 { font-size: 28px; margin-bottom: 8px; }
+        .result-card h2.success { color: var(--green); }
+        .result-card h2.fail { color: var(--red); }
+        .result-card .details {
+            color: var(--text-dim);
+            font-size: 14px;
+            margin: 16px 0;
+            line-height: 1.8;
+        }
+        .result-card .details .label { color: var(--text-faint); }
+        .result-card .score-box {
+            margin-top: 14px;
+            padding: 14px;
+            border: 1px solid rgba(139,92,246,0.25);
+            border-radius: 10px;
+            background: rgba(139,92,246,0.08);
+            color: #a78bfa;
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .result-card .btn-close {
+            margin-top: 20px;
+            padding: 10px 32px;
+            background: var(--accent-strong);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .result-card .btn-close:hover { background: #6d28d9; }
+
+        /* ─── Run Progress ─── */
+        .run-progress { padding: 8px 0; }
+        .test-case-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+        .test-case-result .pass { color: var(--green); }
+        .test-case-result .fail { color: var(--red); }
+        .test-case-result .pending { color: var(--text-faint); }
+
+        /* ─── Fullscreen mode ─── */
+        .fullscreen-editor #editor-container {
+            position: fixed;
+            top: 52px; left: 0; right: 0; bottom: 0;
+            z-index: 999;
+        }
+
+        /* ─── Loading Spinner ─── */
+        .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .text-success { color: var(--green); }
+        .text-danger { color: var(--red); }
+        .text-muted { color: var(--text-faint); }
+        .hidden { display: none !important; }
+        .panel-handle {
+            height: 24px;
+            background: var(--panel);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-faint);
+            transition: color 0.2s;
+            flex-shrink: 0;
+        }
+        .panel-handle:hover { color: var(--accent); }
+        .bottom-panel.collapsed .tabs,
+        .bottom-panel.collapsed .tab-content,
+        .bottom-panel.collapsed .panel-footer { display: none; }
+        .bottom-panel.collapsed { max-height: 24px; }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-faint);
+            font-size: 14px;
+        }
+
+        /* ─── Lock banner ─── */
+        .lock-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1100;
+            background: rgba(239,68,68,0.95);
+            color: #fff;
+            text-align: center;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="logo"><i class="fas fa-code"></i> CodeDebug</div>
+        <div id="violationBadge" class="violation-badge {% if violation_count == 0 %}hidden{% endif %}">
+            <i class="fas fa-exclamation-triangle"></i> <span id="violationCount">{{ violation_count }}</span>
+        </div>
+        <div class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span>{{ username }}</span>
+            <span class="user-detail">{{ year }} &middot; {{ department }}</span>
+            <a href="/" class="switch-user"><i class="fas fa-sign-out-alt"></i> Switch User</a>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-container">
+        <!-- Question Sidebar -->
+        <div class="question-sidebar">
+            <h3><i class="fas fa-list"></i> Debugging Problems</h3>
+            {% for q in questions %}
+            <div class="question-item {{ 'active' if loop.first }}" data-id="{{ q.id }}" onclick="switchQuestion({{ q.id }})">
+                <span class="status-dot {{ q.status }}"></span>
+                <span class="q-title">{{ q.title }}</span>
+                <span class="q-diff {{ q.difficulty|lower }}">{{ q.difficulty }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="split-panes">
+                <!-- Left Panel: Problem -->
+                <div class="left-panel" id="problemPanel">
+                    {% if first_question %}
+                    <div class="problem-header">
+                        <h1 id="problemTitle">{{ first_question.title }}</h1>
+                        <div class="problem-meta">
+                            <span class="difficulty-badge {{ first_question.difficulty|lower }}" id="problemDifficulty">{{ first_question.difficulty }}</span>
+                            <span class="problem-stats">Problem #<span id="problemNumber">{{ first_question.id }}</span></span>
+                        </div>
+                    </div>
+                    <div class="problem-body" id="problemBody">
+                        <div class="problem-section">
+                            <h3>Description</h3>
+                            <p id="problemDescription">{{ first_question.description }}</p>
+                        </div>
+                        <div class="problem-section">
+                            <h3>Input Format</h3>
+                            <p id="problemInputFormat">{{ first_question.input_format }}</p>
+                        </div>
+                        <div class="problem-section">
+                            <h3>Output Format</h3>
+                            <p id="problemOutputFormat">{{ first_question.output_format }}</p>
+                        </div>
+                        <div class="problem-section">
+                            <h3>Constraints</h3>
+                            <p id="problemConstraints">{{ first_question.constraints }}</p>
+                        </div>
+                        <div class="problem-section">
+                            <h3>Sample Input</h3>
+                            <div class="sample-box"><pre id="problemSampleInput">{{ first_question.sample_input }}</pre></div>
+                        </div>
+                        <div class="problem-section">
+                            <h3>Sample Output</h3>
+                            <div class="sample-box"><pre id="problemSampleOutput">{{ first_question.sample_output }}</pre></div>
+                        </div>
+                        <div class="problem-section" id="explanationSection" {% if not first_question.explanation %}style="display:none"{% endif %}>
+                            <h3>Explanation</h3>
+                            <p id="problemExplanation">{{ first_question.explanation or '' }}</p>
+                        </div>
+                        <div class="problem-section" id="notesSection" {% if not first_question.notes %}style="display:none"{% endif %}>
+                            <h3>Notes</h3>
+                            <p id="problemNotes">{{ first_question.notes or '' }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">No problems configured yet.</div>
+                    {% endif %}
+                </div>
+
+                <!-- Right Panel: Editor -->
+                <div class="right-panel" id="editorPanel">
+                    <div class="editor-toolbar">
+                        <select id="languageSelect">
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="c">C</option>
+                            <option value="cpp">C++</option>
+                        </select>
+                        <div class="spacer"></div>
+                        <div class="font-control">
+                            <i class="fas fa-font"></i>
+                            <input type="range" id="fontSizeSlider" min="12" max="24" value="14">
+                            <span id="fontSizeLabel">14</span>
+                        </div>
+                        <button onclick="toggleEditorFullscreen()" title="Full Screen Editor"><i class="fas fa-expand"></i></button>
+                    </div>
+                    <div id="editor-container">
+                        <div id="monaco-editor" style="width:100%;height:100%;"></div>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="action-bar">
+                        <button class="btn-run" onclick="runCode()"><i class="fas fa-play"></i> Run</button>
+                        <button class="btn-submit" onclick="submitCode()"><i class="fas fa-check"></i> Submit</button>
+                        <button class="btn-reset" onclick="resetCode()"><i class="fas fa-undo"></i> Reset</button>
+                        <div class="spacer"></div>
+                        <button class="btn-nav" onclick="prevQuestion()"><i class="fas fa-chevron-left"></i> Previous</button>
+                        <button class="btn-nav" onclick="nextQuestion()">Next <i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panel -->
+            <div class="bottom-panel" id="bottomPanel">
+                <div class="panel-handle" onclick="toggleBottomPanel()">
+                    <i class="fas fa-chevron-up" id="panelToggleIcon"></i>
+                </div>
+                <div class="tabs">
+                    <button class="active" data-tab="input" onclick="switchBottomTab('input')">Custom Input</button>
+                    <button data-tab="output" onclick="switchBottomTab('output')">Output</button>
+                    <button data-tab="errors" onclick="switchBottomTab('errors')">Errors</button>
+                    <button data-tab="runresult" onclick="switchBottomTab('runresult')">Run Result</button>
+                </div>
+                <div class="tab-content active" id="tab-input">
+                    <textarea id="customInput" placeholder="Enter your custom input here..."></textarea>
+                </div>
+                <div class="tab-content" id="tab-output">
+                    <pre id="programOutput">Output will appear here...</pre>
+                </div>
+                <div class="tab-content" id="tab-errors">
+                    <pre id="compilationErrors" class="text-danger">No errors.</pre>
+                </div>
+                <div class="tab-content" id="tab-runresult">
+                    <div id="runResultArea">
+                        <div class="text-muted">Run your code to see results here.</div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <span class="stat"><i class="fas fa-clock"></i> Time: <span id="execTime">-</span>s</span>
+                    <span class="stat"><i class="fas fa-memory"></i> Memory: <span id="memUsage">-</span> KB</span>
+                    <span class="stat"><i class="fas fa-microchip"></i> Status: <span id="runStatus">Ready</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Overlay -->
+    <div class="result-overlay hidden" id="resultOverlay">
+        <div class="result-card">
+            <div class="icon" id="resultIcon"></div>
+            <h2 id="resultTitle"></h2>
+            <div class="details" id="resultDetails"></div>
+            <button class="btn-close" onclick="closeResult()">Close</button>
+        </div>
+    </div>
+
+    {% if locked %}
+    <div class="lock-banner" id="lockBanner">
+        <i class="fas fa-lock"></i> Contest locked due to too many violations. Code editor is read-only.
+    </div>
+    {% endif %}
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script src="{{ url_for('static', filename='js/contest.js') }}"></script>
+    <script>
+        // Data from server
+        const QUESTIONS = {{ questions|tojson }};
+        const IS_LOCKED = {{ 'true' if locked else 'false' }};
+        {% if first_question %}
+        let currentQuestionId = {{ first_question.id }};
+        {% else %}
+        let currentQuestionId = null;
+        {% endif %}
+        let editor = null;
+        let activeLanguage = 'python';
+
+        const TEMPLATES = {
+            python: '# Write your Python code here\n\ndef solve():\n    # Read input and print your answer\n    pass\n\nif __name__ == "__main__":\n    solve()\n',
+            java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your code here\n    }\n}\n',
+            c: '#include <stdio.h>\n\nint main() {\n    // Write your code here\n    return 0;\n}\n',
+            cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your code here\n    return 0;\n}\n',
+        };
+
+        // Initialize Monaco
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+        require(['vs/editor/editor.main'], function() {
+            const savedLang = localStorage.getItem('code_language') || 'python';
+            activeLanguage = savedLang;
+            document.getElementById('languageSelect').value = savedLang;
+
+            editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                value: '',
+                language: savedLang,
+                theme: 'hc-black',
+                fontSize: 14,
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 4,
+                renderWhitespace: 'selection',
+                padding: { top: 12 },
+                bracketPairColorization: { enabled: true },
+                smoothScrolling: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+            });
+
+            if (currentQuestionId) {
+                loadSavedCode(currentQuestionId);
+            } else {
+                loadTemplateCode();
+            }
+
+            if (IS_LOCKED) {
+                document.querySelector('.btn-run').disabled = true;
+                document.querySelector('.btn-submit').disabled = true;
+                document.getElementById('languageSelect').disabled = true;
+                editor.updateOptions({ readOnly: true });
+            }
+
+            // Auto-save every 5 seconds
+            setInterval(autoSave, 5000);
+
+            // Font size slider
+            document.getElementById('fontSizeSlider').addEventListener('input', function() {
+                const size = parseInt(this.value);
+                editor.updateOptions({ fontSize: size });
+                document.getElementById('fontSizeLabel').textContent = size;
+            });
+
+            // Language change
+            document.getElementById('languageSelect').addEventListener('change', function() {
+                const newLang = this.value;
+                const prevLang = activeLanguage;
+                if (newLang === prevLang) return;
+
+                const current = getCode().trim();
+                const isBareTemplate = !current || Object.values(TEMPLATES).some(t => t.trim() === current);
+
+                if (isBareTemplate || confirm(`Switch to ${newLang.toUpperCase()}? Your current code will be replaced with the ${newLang.toUpperCase()} template.`)) {
+                    activeLanguage = newLang;
+                    const model = editor.getModel();
+                    monaco.editor.setModelLanguage(model, newLang);
+                    localStorage.setItem('code_language', newLang);
+                    loadTemplateCode();
+                } else {
+                    this.value = prevLang;
+                }
+            });
+
+            // Init anti-cheat
+            try { initAntiCheat({{ violation_count }}, {{ max_violations }}); } catch(e) { console.warn('Anti-cheat init error:', e); }
+        });
+
+        function getCode() {
+            return editor ? editor.getValue() : '';
+        }
+
+        function setCode(code) {
+            if (editor) editor.setValue(code);
+        }
+
+        function getLanguage() {
+            return document.getElementById('languageSelect').value;
+        }
+
+        function loadSavedCode(questionId) {
+            fetch(`/api/load-code/${questionId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.code) {
+                        setCode(data.code);
+                        const lang = data.language || 'python';
+                        activeLanguage = lang;
+                        document.getElementById('languageSelect').value = lang;
+                        if (editor) {
+                            const model = editor.getModel();
+                            monaco.editor.setModelLanguage(model, lang);
+                        }
+                    } else {
+                        loadTemplateCode(questionId);
+                    }
+                })
+                .catch(() => loadTemplateCode(questionId));
+        }
+
+        function loadTemplateCode(questionId) {
+            const lang = getLanguage();
+            activeLanguage = lang;
+            setCode(TEMPLATES[lang] || '');
+        }
+
+        function autoSave() {
+            if (!currentQuestionId) return;
+            if (IS_LOCKED) return;
+            const code = getCode();
+            if (!code.trim()) return;
+            fetch('/api/save-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question_id: currentQuestionId,
+                    language: getLanguage(),
+                    code: code,
+                }),
+            }).catch(() => {});
+        }
+    </script>
+</body>
+</html>

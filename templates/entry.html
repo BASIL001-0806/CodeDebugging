@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Debugging Contest</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #000000;
+            --accent: #8b5cf6;
+            --border: rgba(255,255,255,0.08);
+            --text: #e5e5ec;
+            --text-dim: rgba(255,255,255,0.45);
+        }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        /* Void nebula glows */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before {
+            width: 60vmax; height: 60vmax;
+            background: radial-gradient(circle, rgba(139,92,246,0.28), transparent 65%);
+            top: -20vmax; left: -15vmax;
+        }
+        body::after {
+            width: 50vmax; height: 50vmax;
+            background: radial-gradient(circle, rgba(56,189,248,0.18), transparent 65%);
+            bottom: -18vmax; right: -12vmax;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 420px;
+            background: rgba(8,8,12,0.85);
+            backdrop-filter: blur(18px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 44px 40px 38px;
+            box-shadow: 0 0 0 1px rgba(139,92,246,0.05), 0 30px 70px rgba(0,0,0,0.9);
+        }
+        .badge {
+            width: 56px; height: 56px;
+            margin: 0 auto 20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(139,92,246,0.05));
+            border: 1px solid rgba(139,92,246,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: #a78bfa;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+        }
+        .subtitle {
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .form-group { margin-bottom: 18px; }
+        label {
+            display: block;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
+        input {
+            width: 100%;
+            padding: 13px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        input::placeholder { color: rgba(255,255,255,0.22); }
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+        }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn {
+            width: 100%;
+            margin-top: 6px;
+            padding: 14px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s;
+            letter-spacing: 0.3px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(124,58,237,0.35);
+        }
+        .error {
+            color: #f87171;
+            font-size: 13px;
+            margin-bottom: 16px;
+            text-align: center;
+            padding: 10px;
+            background: rgba(248,113,113,0.08);
+            border: 1px solid rgba(248,113,113,0.2);
+            border-radius: 8px;
+        }
+        .footer {
+            margin-top: 26px;
+            text-align: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="badge">&lt;/&gt;</div>
+        <h1>Code Debugging Contest</h1>
+        <p class="subtitle">Enter your details to join the event.<br>Admins are recognised automatically.</p>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Your full name" required autofocus>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="text" name="year" placeholder="e.g. 1st, 2nd, 3rd" required>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" name="department" placeholder="e.g. CSE, CYS, AIML" required>
+                </div>
+            </div>
+            <button type="submit" class="btn">Enter Contest</button>
+        </form>
+        <div class="footer">Code Debugging Event</div>
+    </div>
+</body>
+</html>

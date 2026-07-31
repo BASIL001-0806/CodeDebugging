@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #000000;
+            --panel: #07070c;
+            --panel-2: #0b0b12;
+            --border: #15151f;
+            --text: #c9c9d4;
+            --text-dim: rgba(255,255,255,0.4);
+            --accent: #8b5cf6;
+            --accent-strong: #7c3aed;
+            --green: #22c55e;
+            --amber: #f59e0b;
+            --red: #ef4444;
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(900px 600px at 50% -10%, rgba(139,92,246,0.07), transparent 60%);
+        }
+        h1 { font-size: 22px; margin-bottom: 20px; }
+        h1 i { color: var(--accent); }
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 { font-size: 15px; margin-bottom: 16px; color: var(--accent); }
+        .card h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-dim); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:hover td { background: rgba(139,92,246,0.05); }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge.easy { background: rgba(34,197,94,0.15); color: var(--green); }
+        .badge.medium { background: rgba(245,158,11,0.15); color: var(--amber); }
+        .badge.hard { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge.accepted { background: rgba(34,197,94,0.15); color: var(--green); }
+        .badge.warning { background: rgba(245,158,11,0.15); color: var(--amber); }
+        .badge.danger { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge.admin { background: rgba(139,92,246,0.15); color: #a78bfa; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent-strong); color: #fff; }
+        .btn-primary:hover { background: #6d28d9; }
+        .btn-success { background: var(--green); color: #000; }
+        .btn-success:hover { background: #16a34a; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+        .form-group textarea { min-height: 60px; resize: vertical; font-family: monospace; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .tc-entry {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .tc-entry .tc-row { display: flex; gap: 8px; align-items: center; }
+        .tc-entry textarea { flex: 1; min-height: 40px; }
+        .tc-entry label { font-size: 11px; }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .nav a { color: var(--text-dim); text-decoration: none; font-size: 13px; }
+        .nav a:hover { color: var(--accent); }
+        .full-width { grid-column: 1 / -1; }
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 20px; }
+        .tab-nav button {
+            padding: 8px 20px;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .tab-nav button.active { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .text-muted { color: var(--text-dim); }
+        .score-cell { color: #a78bfa; font-weight: 700; }
+        hr { border-color: var(--border); }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+        <div>
+            <span style="color:rgba(255,255,255,0.5);margin-right:16px;">{{ username }} <span class="badge admin">ADMIN</span></span>
+            <a href="/"><i class="fas fa-sign-out-alt"></i> Switch User</a>
+        </div>
+    </div>
+
+    <div class="tab-nav">
+        <button class="active" onclick="switchAdminTab('questions')">Questions</button>
+        <button onclick="switchAdminTab('violations')">Violations</button>
+        <button onclick="switchAdminTab('leaderboard')">Leaderboard</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-questions">
+        <div class="admin-grid">
+            <div class="card full-width">
+                <h2><i class="fas fa-tasks"></i> Questions</h2>
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Title</th><th>Difficulty</th><th>Order</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for q in questions %}
+                        <tr>
+                            <td>{{ q.id }}</td>
+                            <td>{{ q.title }}</td>
+                            <td><span class="badge {{ q.difficulty|lower }}">{{ q.difficulty }}</span></td>
+                            <td>{{ q.order_num }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card full-width">
+                <h2><i class="fas fa-plus-circle"></i> Create Question</h2>
+                <form id="questionForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Difficulty</label>
+                            <select name="difficulty">
+                                <option value="Easy">Easy</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Hard">Hard</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Input Format</label>
+                            <textarea name="input_format" rows="2" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Output Format</label>
+                            <textarea name="output_format" rows="2" required></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Constraints</label>
+                        <textarea name="constraints" rows="2" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Sample Input</label>
+                            <textarea name="sample_input" rows="2" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Sample Output</label>
+                            <textarea name="sample_output" rows="2" required></textarea>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Explanation (optional)</label>
+                            <textarea name="explanation" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes (optional)</label>
+                            <textarea name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Order Number</label>
+                        <input type="number" name="order_num" value="0">
+                    </div>
+                    <hr style="margin:16px 0;">
+                    <h3>Test Cases</h3>
+                    <div id="testCasesContainer">
+                        <div class="tc-entry">
+                            <div class="tc-row">
+                                <textarea name="tc_input_0" placeholder="Input" rows="2"></textarea>
+                                <textarea name="tc_output_0" placeholder="Expected Output" rows="2"></textarea>
+                            </div>
+                            <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin-top:4px;">
+                                <input type="checkbox" name="tc_hidden_0" checked> Hidden test case
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="addTestCase()" style="margin-bottom:12px;">
+                        <i class="fas fa-plus"></i> Add Test Case
+                    </button>
+                    <div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Create Question</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="tab-violations">
+        <div class="card">
+            <h2><i class="fas fa-exclamation-triangle"></i> Violation Log</h2>
+            {% if violations %}
+            <table>
+                <thead><tr><th>Time</th><th>User</th><th>Type</th><th>Details</th></tr></thead>
+                <tbody>
+                    {% for v in violations %}
+                    <tr>
+                        <td>{{ v.created_at }}</td>
+                        <td>{{ v.name }}</td>
+                        <td><span class="badge {{ 'danger' if v.violation_type == 'tab_switch' else 'warning' }}">{{ v.violation_type }}</span></td>
+                        <td style="font-size:12px;color:rgba(255,255,255,0.5);">{{ v.details or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted">No violations recorded.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="tab-panel" id="tab-leaderboard">
+        <div class="card">
+            <h2><i class="fas fa-trophy"></i> Scores / Leaderboard</h2>
+            {% if leaderboard %}
+            <table>
+                <thead><tr><th>Rank</th><th>Name</th><th>Year</th><th>Dept</th><th>Solved</th><th>Score</th><th>Total Time</th><th>Total Memory</th></tr></thead>
+                <tbody>
+                    {% for row in leaderboard %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ row.name }}</td>
+                        <td>{{ row.year }}</td>
+                        <td>{{ row.department }}</td>
+                        <td><span class="badge accepted">{{ row.solved }}</span></td>
+                        <td class="score-cell">{{ row.score }}</td>
+                        <td>{{ '%.4f'|format(row.total_time) }}s</td>
+                        <td>{{ '%.2f'|format(row.total_memory) }} KB</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted">No submissions yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        let tcCounter = 1;
+
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector(`.tab-nav button[onclick*="${tab}"]`).classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+
+        function addTestCase() {
+            const container = document.getElementById('testCasesContainer');
+            const div = document.createElement('div');
+            div.className = 'tc-entry';
+            div.innerHTML = `
+                <div class="tc-row">
+                    <textarea name="tc_input_${tcCounter}" placeholder="Input" rows="2"></textarea>
+                    <textarea name="tc_output_${tcCounter}" placeholder="Expected Output" rows="2"></textarea>
+                </div>
+                <label style="font-size:12px;display:flex;align-items:center;gap:4px;margin-top:4px;">
+                    <input type="checkbox" name="tc_hidden_${tcCounter}" checked> Hidden test case
+                </label>
+            `;
+            container.appendChild(div);
+            tcCounter++;
+        }
+
+        document.getElementById('questionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = new FormData(this);
+            const testCases = [];
+            const entries = document.querySelectorAll('.tc-entry');
+            entries.forEach((entry, i) => {
+                const input = entry.querySelector('.tc-row textarea:nth-child(1)').value;
+                const output = entry.querySelector('.tc-row textarea:nth-child(2)').value;
+                const hidden = entry.querySelector('input[type="checkbox"]').checked;
+                if (input || output) {
+                    testCases.push({ input, expected_output: output, is_hidden: hidden ? 1 : 0 });
+                }
+            });
+
+            const data = {
+                title: form.get('title'),
+                difficulty: form.get('difficulty'),
+                description: form.get('description'),
+                input_format: form.get('input_format'),
+                output_format: form.get('output_format'),
+                constraints: form.get('constraints'),
+                sample_input: form.get('sample_input'),
+                sample_output: form.get('sample_output'),
+                explanation: form.get('explanation'),
+                notes: form.get('notes'),
+                order_num: parseInt(form.get('order_num')) || 0,
+                test_cases: testCases,
+            };
+
+            fetch('/api/admin/question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.status === 'created') {
+                    alert(`Question created with ID: ${resp.question_id}`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + JSON.stringify(resp));
+                }
+            })
+            .catch(err => alert('Error: ' + err.message));
+        });
+    </script>
+</body>
+</html>
